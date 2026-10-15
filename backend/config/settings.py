@@ -94,6 +94,7 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 MEDIA_URL = '/media/'
@@ -133,6 +134,8 @@ SPECTACULAR_SETTINGS = {
 }
 
 
+
+
 # SECRET_KEY = os.environ["SECRET_KEY"]
 # DEBUG = os.environ.get("DEBUG", "False") == "True"
 # ALLOWED_HOSTS = [os.environ.get("BACKEND_HOST", "localhost")]
@@ -140,5 +143,5 @@ SPECTACULAR_SETTINGS = {
 # MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
 # MIDDLEWARE.insert(0, "corsheaders.middleware.CorsMiddleware")
 # DATABASES = {"default": dj_database_url.config(conn_max_age=600)}
-# STATIC_ROOT = BASE_DIR / "staticfiles"
+
 # CORS_ALLOWED_ORIGINS = [os.environ["FRONTEND_URL"]]
