@@ -67,12 +67,17 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-DATABASES = {
-    "default": dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600,
-    )
-}
+DATABASE_URL = config("DATABASE_URL", default="").strip().strip('"').strip("'")
+
+if DATABASE_URL:
+    DATABASES = {"default": dj_database_url.parse(DATABASE_URL, conn_max_age=600)}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 AUTH_USER_MODEL = 'users.User'
 
@@ -128,12 +133,12 @@ SPECTACULAR_SETTINGS = {
 }
 
 
-SECRET_KEY = os.environ["SECRET_KEY"]
-DEBUG = os.environ.get("DEBUG", "False") == "True"
-ALLOWED_HOSTS = [os.environ.get("BACKEND_HOST", "localhost")]
-INSTALLED_APPS += ["corsheaders"]
-MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
-MIDDLEWARE.insert(0, "corsheaders.middleware.CorsMiddleware")
-DATABASES = {"default": dj_database_url.config(conn_max_age=600)}
-STATIC_ROOT = BASE_DIR / "staticfiles"
-CORS_ALLOWED_ORIGINS = [os.environ["FRONTEND_URL"]]
+# SECRET_KEY = os.environ["SECRET_KEY"]
+# DEBUG = os.environ.get("DEBUG", "False") == "True"
+# ALLOWED_HOSTS = [os.environ.get("BACKEND_HOST", "localhost")]
+# INSTALLED_APPS += ["corsheaders"]
+# MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
+# MIDDLEWARE.insert(0, "corsheaders.middleware.CorsMiddleware")
+# DATABASES = {"default": dj_database_url.config(conn_max_age=600)}
+# STATIC_ROOT = BASE_DIR / "staticfiles"
+# CORS_ALLOWED_ORIGINS = [os.environ["FRONTEND_URL"]]
