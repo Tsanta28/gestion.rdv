@@ -134,7 +134,7 @@ SPECTACULAR_SETTINGS = {
 }
 
 
-
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".onrender.com"]
 
 # SECRET_KEY = os.environ["SECRET_KEY"]
 # DEBUG = os.environ.get("DEBUG", "False") == "True"
