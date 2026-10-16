@@ -132,9 +132,9 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'API REST pour la gestion de rendez-vous medicaux (admin, secretaire, docteur, patient).',
     'VERSION': '1.0.0',
 }
-
-
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".onrender.com"]
+
+
 
 # SECRET_KEY = os.environ["SECRET_KEY"]
 # DEBUG = os.environ.get("DEBUG", "False") == "True"
