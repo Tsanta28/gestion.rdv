@@ -1,16 +1,33 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Menu, Sun, Moon, Bell, LogOut, UserCircle, Settings, Search, Stethoscope, User, CalendarCheck } from 'lucide-react'
+import { Menu, Sun, Moon, Bell, LogOut, UserCircle, Settings, Search, Stethoscope, User, CalendarCheck, CheckCheck } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
+import { useNotifications } from '../context/NotificationContext'
 import { listDoctors } from '../services/doctorService'
 import { listPatients } from '../services/patientService'
 import { listAppointments } from '../services/appointmentService'
 import Avatar from './Avatar'
 
-export default function Navbar({ onToggleMobileMenu, pendingCount = 0 }) {
+const TYPE_DOT = {
+  success: 'bg-emerald-500',
+  warning: 'bg-amber-500',
+  info: 'bg-sky-500',
+}
+
+function tempsEcoule(dateStr) {
+  const diffMin = Math.round((Date.now() - new Date(dateStr).getTime()) / 60000)
+  if (diffMin < 1) return "à l'instant"
+  if (diffMin < 60) return `il y a ${diffMin} min`
+  const diffH = Math.round(diffMin / 60)
+  if (diffH < 24) return `il y a ${diffH} h`
+  return `il y a ${Math.round(diffH / 24)} j`
+}
+
+export default function Navbar({ onToggleMobileMenu }) {
   const { user, role, photo, logout } = useAuth()
   const { dark, toggle } = useTheme()
+  const { notifications, unreadCount, markRead, markAllRead } = useNotifications()
   const navigate = useNavigate()
 
   const [menuOpen, setMenuOpen] = useState(false)
@@ -197,19 +214,45 @@ export default function Navbar({ onToggleMobileMenu, pendingCount = 0 }) {
             className="relative p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
           >
             <Bell size={18} />
-            {pendingCount > 0 && (
+            {unreadCount > 0 && (
               <span className="absolute -top-0.5 -right-0.5 bg-amber-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                {pendingCount > 9 ? '9+' : pendingCount}
+                {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
           </button>
           {notifOpen && (
-            <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl shadow-lg p-3 text-sm">
-              {pendingCount > 0 ? (
-                <p>{pendingCount} rendez-vous nécessite{pendingCount > 1 ? 'nt' : ''} votre attention.</p>
-              ) : (
-                <p className="text-gray-400">Aucune notification.</p>
-              )}
+            <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl shadow-lg text-sm overflow-hidden">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100 dark:border-gray-800">
+                <span className="font-medium">Notifications</span>
+                {unreadCount > 0 && (
+                  <button onClick={markAllRead} className="flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400 hover:underline">
+                    <CheckCheck size={13} /> Tout marquer lu
+                  </button>
+                )}
+              </div>
+              <div className="max-h-80 overflow-y-auto">
+                {notifications.length === 0 ? (
+                  <p className="text-gray-400 px-3 py-4 text-center">Aucune notification.</p>
+                ) : (
+                  notifications.map((n) => (
+                    <button
+                      key={n.id}
+                      onClick={() => {
+                        if (!n.lu) markRead(n.id)
+                        setNotifOpen(false)
+                        if (n.rendezvous) navigate(`/${role}/rendezvous?view=${n.rendezvous}`)
+                      }}
+                      className={`w-full flex items-start gap-2 px-3 py-2.5 text-left border-b border-gray-50 dark:border-gray-800/60 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800 ${!n.lu ? 'bg-primary-50/50 dark:bg-primary-900/10' : ''}`}
+                    >
+                      <span className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${n.lu ? 'bg-transparent' : TYPE_DOT[n.type] || 'bg-sky-500'}`} />
+                      <span className="flex-1">
+                        <span className={n.lu ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100 font-medium'}>{n.message}</span>
+                        <span className="block text-xs text-gray-400 mt-0.5">{tempsEcoule(n.created_at)}</span>
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
             </div>
           )}
         </div>

@@ -1,4 +1,5 @@
 from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -20,7 +21,7 @@ class PatientViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         # Lecture : tout utilisateur connecte. Ecriture : secretaire/admin.
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+        if self.action in ['create', 'update', 'partial_update', 'destroy', 'valider']:
             return [IsSecretaire()]
         return super().get_permissions()
 
@@ -33,10 +34,33 @@ class PatientViewSet(viewsets.ModelViewSet):
             from apps.rendezvous.models import RendezVous
             patient_ids = RendezVous.objects.filter(docteur__user=u).values_list('patient_id', flat=True)
             return qs.filter(id__in=patient_ids)
+
+        # Admin / secretaire : par defaut on masque les inscriptions en
+        # attente de validation de la liste generale, sauf demande explicite
+        # via ?statut=en_attente (ou ?statut=actif pour forcer l'inverse).
+        statut = self.request.query_params.get('statut')
+        if statut == 'en_attente':
+            qs = qs.filter(user__is_active=False)
+        elif statut == 'actif' or statut is None:
+            qs = qs.filter(user__is_active=True)
         return qs
 
     def perform_create(self, serializer):
         serializer.save()
+
+    @action(detail=True, methods=['patch'])
+    def valider(self, request, pk=None):
+        """Valide l'inscription d'un patient auto-inscrit (active son compte)."""
+        # On ne passe pas par self.get_object() car le queryset par defaut
+        # exclut les comptes en_attente (is_active=False) : c'est justement
+        # ce qu'on doit pouvoir cibler ici.
+        try:
+            patient = Patient.objects.select_related('user').get(pk=pk)
+        except Patient.DoesNotExist:
+            return Response({'detail': 'Patient introuvable.'}, status=404)
+        patient.user.is_active = True
+        patient.user.save(update_fields=['is_active'])
+        return Response(PatientSerializer(patient, context={'request': request}).data)
 
 
 class MyPatientProfileView(APIView):

@@ -27,3 +27,6 @@ export const updatePatient = (id, payload) => {
 }
 
 export const deletePatient = (id) => api.delete(`/patients/${id}/`)
+
+export const listPatientsEnAttente = () => api.get('/patients/', { params: { statut: 'en_attente' } }).then((r) => r.data)
+export const validerPatient = (id) => api.patch(`/patients/${id}/valider/`).then((r) => r.data)

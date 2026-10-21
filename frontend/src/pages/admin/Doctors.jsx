@@ -11,6 +11,7 @@ import Loader from '../../components/Loader'
 import SpecialtyCombobox from '../../components/SpecialtyCombobox'
 import ActionButtons from '../../components/ActionButtons'
 import PhotoUploader from '../../components/PhotoUploader'
+import PasswordInput from '../../components/PasswordInput'
 import Avatar from '../../components/Avatar'
 import { useToast } from '../../components/Toast'
 import { Loader2 } from 'lucide-react'
@@ -155,7 +156,7 @@ export default function AdminDoctors() {
             {createForm.formState.errors.email && <p className="text-xs text-rose-600 mt-1">{createForm.formState.errors.email.message}</p>}
           </div>
           <div>
-            <input type="password" placeholder="Mot de passe" {...createForm.register('password')}
+            <PasswordInput placeholder="Mot de passe" {...createForm.register('password')}
               className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-transparent" />
             {createForm.formState.errors.password && <p className="text-xs text-rose-600 mt-1">{createForm.formState.errors.password.message}</p>}
           </div>
@@ -207,7 +208,7 @@ export default function AdminDoctors() {
               className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-transparent" />
             <textarea placeholder="Description" rows={3} {...editForm.register('description')}
               className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-transparent" />
-            <input type="password" placeholder="Nouveau mot de passe (optionnel)" {...editForm.register('password')}
+            <PasswordInput placeholder="Nouveau mot de passe (optionnel)" {...editForm.register('password')}
               className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-transparent" />
             <button type="submit" disabled={editForm.formState.isSubmitting}
               className="w-full flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-700 text-white py-2.5 rounded-lg font-medium transition-colors disabled:opacity-60">

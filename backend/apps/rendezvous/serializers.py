@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import serializers
 from apps.patients.serializers import PatientSerializer
 from apps.docteurs.serializers import DocteurSerializer
@@ -37,6 +38,13 @@ class RendezVousSerializer(serializers.ModelSerializer):
 
     def get_a_consultation(self, obj):
         return hasattr(obj, 'consultation')
+
+    def validate_date_heure(self, value):
+        if value < timezone.now():
+            raise serializers.ValidationError(
+                "La date du rendez-vous ne peut pas etre dans le passe."
+            )
+        return value
 
     def create(self, validated_data):
         request = self.context.get('request')

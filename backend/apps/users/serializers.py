@@ -25,11 +25,18 @@ class RegisterSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, validated_data):
-        # Inscription publique = toujours role patient
+        # Inscription publique = toujours role patient, et le compte reste
+        # inactif tant que la secretaire n'a pas valide l'inscription.
+        from apps.patients.models import Patient
+
         password = validated_data.pop('password')
-        user = User(role=User.Role.PATIENT, **validated_data)
+        user = User(role=User.Role.PATIENT, is_active=False, **validated_data)
         user.set_password(password)
         user.save()
+        # Le profil Patient doit exister des la creation, sinon la prise de
+        # RDV et les autres fonctionnalites patient echouent une fois le
+        # compte valide.
+        Patient.objects.create(user=user)
         return user
 
 
@@ -57,11 +64,26 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
+        # authenticate() rejette silencieusement les comptes inactifs (il
+        # renvoie None dans ce cas, comme pour un mauvais mot de passe) :
+        # on ne peut donc pas distinguer "identifiants invalides" de
+        # "compte en attente de validation" en passant uniquement par lui.
+        # On verifie donc le mot de passe nous-memes si l'utilisateur
+        # existe mais est inactif.
         user = authenticate(username=attrs['username'], password=attrs['password'])
         if not user:
+            try:
+                candidat = User.objects.get(username=attrs['username'])
+            except User.DoesNotExist:
+                candidat = None
+            if candidat and not candidat.is_active and candidat.check_password(attrs['password']):
+                if candidat.role == User.Role.PATIENT:
+                    raise serializers.ValidationError(
+                        "Votre inscription est en attente de validation par la secretaire. "
+                        "Vous recevrez un acces des qu'elle aura ete verifiee."
+                    )
+                raise serializers.ValidationError('Ce compte est desactive.')
             raise serializers.ValidationError('Identifiants invalides.')
-        if not user.is_active:
-            raise serializers.ValidationError('Ce compte est desactive.')
         attrs['user'] = user
         return attrs
 

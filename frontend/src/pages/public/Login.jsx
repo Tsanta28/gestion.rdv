@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import PasswordInput from '../../components/PasswordInput'
 
 const HOME_BY_ROLE = {
   admin: '/admin/dashboard',
@@ -50,8 +51,7 @@ export default function Login() {
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Mot de passe</label>
-            <input
-              type="password"
+            <PasswordInput
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required

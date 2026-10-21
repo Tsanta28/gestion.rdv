@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { Loader2 } from 'lucide-react'
 import api from '../services/api'
 import { useToast } from './Toast'
+import PasswordInput from './PasswordInput'
 
 const schema = z.object({
   old_password: z.string().min(1, 'Ancien mot de passe requis'),
@@ -35,17 +36,17 @@ export default function PasswordChangeForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
       <div>
-        <input type="password" placeholder="Ancien mot de passe" {...register('old_password')}
+        <PasswordInput placeholder="Ancien mot de passe" {...register('old_password')}
           className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-transparent" />
         {errors.old_password && <p className="text-xs text-rose-600 mt-1">{errors.old_password.message}</p>}
       </div>
       <div>
-        <input type="password" placeholder="Nouveau mot de passe" {...register('new_password')}
+        <PasswordInput placeholder="Nouveau mot de passe" {...register('new_password')}
           className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-transparent" />
         {errors.new_password && <p className="text-xs text-rose-600 mt-1">{errors.new_password.message}</p>}
       </div>
       <div>
-        <input type="password" placeholder="Confirmer le nouveau mot de passe" {...register('confirm_password')}
+        <PasswordInput placeholder="Confirmer le nouveau mot de passe" {...register('confirm_password')}
           className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-transparent" />
         {errors.confirm_password && <p className="text-xs text-rose-600 mt-1">{errors.confirm_password.message}</p>}
       </div>

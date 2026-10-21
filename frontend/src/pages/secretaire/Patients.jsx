@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { listPatients, createPatient, updatePatient, deletePatient } from '../../services/patientService'
+import { UserCheck, Clock } from 'lucide-react'
+import { listPatients, createPatient, updatePatient, deletePatient, listPatientsEnAttente, validerPatient } from '../../services/patientService'
 import PatientCard from '../../components/PatientCard'
 import SearchBar from '../../components/SearchBar'
 import Modal from '../../components/Modal'
@@ -9,10 +10,12 @@ import Loader from '../../components/Loader'
 import ActionButtons from '../../components/ActionButtons'
 import PhotoUploader from '../../components/PhotoUploader'
 import Avatar from '../../components/Avatar'
+import PasswordInput from '../../components/PasswordInput'
 import { useToast } from '../../components/Toast'
 
 export default function SecretairePatients() {
   const [patients, setPatients] = useState(null)
+  const [enAttente, setEnAttente] = useState(null)
   const [q, setQ] = useState('')
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -23,8 +26,19 @@ export default function SecretairePatients() {
 
   function load() {
     listPatients().then((data) => setPatients(data.results ?? data))
+    listPatientsEnAttente().then((data) => setEnAttente(data.results ?? data))
   }
   useEffect(load, [])
+
+  async function handleValider(id) {
+    try {
+      await validerPatient(id)
+      push('Inscription validée — le patient peut maintenant se connecter ✅', 'success')
+      load()
+    } catch {
+      push('Erreur lors de la validation.', 'error')
+    }
+  }
 
   const [searchParams, setSearchParams] = useSearchParams()
   useEffect(() => {
@@ -79,10 +93,37 @@ export default function SecretairePatients() {
     `${p.user.first_name} ${p.user.last_name} ${p.user.email}`.toLowerCase().includes(q.toLowerCase())
   )
 
-  if (!patients) return <Loader />
+  if (!patients || !enAttente) return <Loader />
 
   return (
     <div>
+      {enAttente.length > 0 && (
+        <div className="mb-8">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide mb-3">
+            <Clock size={15} /> Inscriptions en attente de validation ({enAttente.length})
+          </h2>
+          <div className="space-y-2">
+            {enAttente.map((p) => (
+              <div key={p.id} className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900 rounded-xl p-4 flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <Avatar name={`${p.user.first_name} ${p.user.last_name}`} size="sm" />
+                  <div>
+                    <p className="text-sm font-medium">{p.user.first_name} {p.user.last_name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{p.user.email} {p.user.phone && `· ${p.user.phone}`}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleValider(p.id)}
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
+                >
+                  <UserCheck size={14} /> Valider l'inscription
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
         <h1 className="text-2xl font-bold">Patients</h1>
         <div className="flex items-center gap-3">
@@ -120,7 +161,7 @@ export default function SecretairePatients() {
             className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-transparent" />
           <input placeholder="Téléphone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })}
             className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-transparent" />
-          <input type="password" placeholder="Mot de passe" required value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}
+          <PasswordInput placeholder="Mot de passe" required value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}
             className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-transparent" />
           <button type="submit" className="w-full bg-primary-600 hover:bg-primary-700 text-white py-2.5 rounded-lg font-medium transition-colors">
             Créer

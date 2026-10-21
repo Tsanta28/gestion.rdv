@@ -68,6 +68,9 @@ export default function PatientAgenda() {
     if (!selectedDoctorId) return
     const docteur = doctors.find((d) => String(d.id) === selectedDoctorId)
     if (!docteur) return
+    const aujourdhui = new Date()
+    aujourdhui.setHours(0, 0, 0, 0)
+    if (slotInfo.start < aujourdhui) return // date passee : on ignore le clic
     const dateStr = slotInfo.start.toISOString().slice(0, 10)
     setDemande({ docteur, date: dateStr })
   }

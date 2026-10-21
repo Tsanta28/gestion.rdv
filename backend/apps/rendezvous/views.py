@@ -1,4 +1,6 @@
 import datetime
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError, PermissionDenied
@@ -9,6 +11,25 @@ from .serializers import (
 )
 from apps.consultations.models import Consultation
 from apps.consultations.serializers import ConsultationSerializer
+from apps.notifications.models import Notification
+
+
+def _notifier(user, message, type_=Notification.Type.INFO, rendezvous=None):
+    if user is None:
+        return
+    Notification.objects.create(user=user, message=message, type=type_, rendezvous=rendezvous)
+
+
+def _rejeter_si_date_passee(valeur, champ='date_heure'):
+    """Leve une ValidationError si la date/heure fournie est deja passee."""
+    dt = valeur if isinstance(valeur, datetime.datetime) else parse_datetime(str(valeur))
+    if dt is None:
+        raise ValidationError({champ: 'Format de date/heure invalide.'})
+    if timezone.is_naive(dt):
+        dt = timezone.make_aware(dt)
+    if dt < timezone.now():
+        raise ValidationError({champ: 'Cette date est deja passee.'})
+    return dt
 
 
 class RendezVousViewSet(viewsets.ModelViewSet):
@@ -47,11 +68,16 @@ class RendezVousViewSet(viewsets.ModelViewSet):
         # proposer un autre creneau. Pour les autres roles, patient_id est
         # obligatoire.
         if u.is_patient:
-            serializer.save(patient=u.patient_profile, statut=RendezVous.Statut.DEMANDE_ENVOYEE)
+            rdv = serializer.save(patient=u.patient_profile, statut=RendezVous.Statut.DEMANDE_ENVOYEE)
         else:
             if 'patient' not in serializer.validated_data:
                 raise ValidationError({'patient_id': 'Ce champ est obligatoire.'})
-            serializer.save(statut=RendezVous.Statut.DEMANDE_ENVOYEE)
+            rdv = serializer.save(statut=RendezVous.Statut.DEMANDE_ENVOYEE)
+        _notifier(
+            rdv.docteur.user,
+            f'Nouvelle demande de rendez-vous de {rdv.patient.user.first_name} {rdv.patient.user.last_name}.',
+            Notification.Type.INFO, rdv,
+        )
 
     @action(detail=True, methods=['patch'])
     def statut(self, request, pk=None):
@@ -71,6 +97,12 @@ class RendezVousViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("Seul le docteur concerne peut accepter cette demande.")
         rdv.statut = RendezVous.Statut.CONFIRME
         rdv.save(update_fields=['statut'])
+        _notifier(
+            rdv.patient.user,
+            f'Dr. {rdv.docteur.user.last_name} a confirmé votre rendez-vous du '
+            f'{rdv.date_heure.strftime("%d/%m/%Y à %H:%M")}.',
+            Notification.Type.SUCCESS, rdv,
+        )
         return Response(RendezVousSerializer(rdv).data)
 
     @action(detail=True, methods=['patch'])
@@ -84,13 +116,26 @@ class RendezVousViewSet(viewsets.ModelViewSet):
         u = request.user
         if u.is_docteur and rdv.docteur.user_id == u.id:
             rdv.statut = RendezVous.Statut.REFUSE
+            rdv.save(update_fields=['statut'])
+            _notifier(
+                rdv.patient.user,
+                f'Dr. {rdv.docteur.user.last_name} a refusé votre demande de rendez-vous.',
+                Notification.Type.WARNING, rdv,
+            )
         elif u.is_patient and rdv.patient.user_id == u.id:
             rdv.statut = RendezVous.Statut.ANNULE
+            rdv.save(update_fields=['statut'])
+            _notifier(
+                rdv.docteur.user,
+                f'{rdv.patient.user.first_name} {rdv.patient.user.last_name} a refusé '
+                f'la proposition de créneau.',
+                Notification.Type.WARNING, rdv,
+            )
         elif u.is_admin:
             rdv.statut = RendezVous.Statut.ANNULE
+            rdv.save(update_fields=['statut'])
         else:
             raise PermissionDenied("Vous n'etes pas autorise a modifier ce rendez-vous.")
-        rdv.save(update_fields=['statut'])
         return Response(RendezVousSerializer(rdv).data)
 
     @action(detail=True, methods=['post'], url_path='proposer-creneau')
@@ -110,6 +155,8 @@ class RendezVousViewSet(viewsets.ModelViewSet):
         creneaux = request.data.get('creneaux') or []
         if not creneaux or len(creneaux) > 3:
             raise ValidationError({'creneaux': 'Fournir entre 1 et 3 creneaux.'})
+        for c in creneaux:
+            _rejeter_si_date_passee(c, 'creneaux')
 
         propositions = []
         for c in creneaux:
@@ -118,6 +165,12 @@ class RendezVousViewSet(viewsets.ModelViewSet):
             ))
         rdv.statut = RendezVous.Statut.PROPOSITION_ENVOYEE
         rdv.save(update_fields=['statut'])
+        _notifier(
+            rdv.patient.user,
+            f'Dr. {rdv.docteur.user.last_name} vous propose {"un nouveau créneau" if len(creneaux) == 1 else "de nouveaux créneaux"} '
+            f'pour votre rendez-vous.',
+            Notification.Type.INFO, rdv,
+        )
         return Response({
             'rendezvous': RendezVousSerializer(rdv).data,
             'propositions': PropositionCreneauSerializer(propositions, many=True).data,
@@ -138,12 +191,24 @@ class RendezVousViewSet(viewsets.ModelViewSet):
         except PropositionCreneau.DoesNotExist:
             return Response({'detail': 'Proposition introuvable.'}, status=404)
 
+        if proposition.date_heure_proposee < timezone.now():
+            return Response(
+                {'detail': 'Ce creneau propose est desormais passe. Demandez un nouveau creneau.'},
+                status=400,
+            )
+
         proposition.statut = PropositionCreneau.Statut.ACCEPTEE
         proposition.save(update_fields=['statut'])
         rdv.propositions.exclude(pk=proposition.pk).update(statut=PropositionCreneau.Statut.REFUSEE)
         rdv.date_heure = proposition.date_heure_proposee
         rdv.statut = RendezVous.Statut.CONFIRME
         rdv.save(update_fields=['date_heure', 'statut'])
+        _notifier(
+            rdv.docteur.user,
+            f'{rdv.patient.user.first_name} {rdv.patient.user.last_name} a accepté le créneau proposé '
+            f'du {rdv.date_heure.strftime("%d/%m/%Y à %H:%M")}.',
+            Notification.Type.SUCCESS, rdv,
+        )
         return Response(RendezVousSerializer(rdv).data)
 
     @action(detail=True, methods=['patch'])
@@ -172,11 +237,22 @@ class RendezVousViewSet(viewsets.ModelViewSet):
         rdv.docteur = nouveau_docteur
         date_heure = request.data.get('date_heure')
         if date_heure:
+            _rejeter_si_date_passee(date_heure)
             rdv.date_heure = date_heure
         rdv.statut = RendezVous.Statut.DEMANDE_ENVOYEE
         # Les propositions precedentes ne concernent plus ce docteur.
         rdv.propositions.update(statut=PropositionCreneau.Statut.REFUSEE)
         rdv.save(update_fields=['docteur', 'date_heure', 'statut'])
+        _notifier(
+            rdv.patient.user,
+            f'Votre demande a été transférée à Dr. {nouveau_docteur.user.last_name} ({nouveau_docteur.specialite}).',
+            Notification.Type.INFO, rdv,
+        )
+        _notifier(
+            nouveau_docteur.user,
+            f'Nouvelle demande de rendez-vous de {rdv.patient.user.first_name} {rdv.patient.user.last_name}.',
+            Notification.Type.INFO, rdv,
+        )
         return Response(RendezVousSerializer(rdv).data)
 
     @action(detail=True, methods=['get', 'post', 'put'])

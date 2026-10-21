@@ -34,8 +34,9 @@ export default function ReassignerDocteurModal({ rdv, onClose, onDone }) {
       await reassignerDocteur(rdv.id, docteurId, dateHeure)
       push('Rendez-vous réassigné à un autre docteur ✅', 'success')
       onDone()
-    } catch {
-      push('Erreur lors de la réassignation.', 'error')
+    } catch (err) {
+      const data = err.response?.data
+      push(data?.date_heure?.[0] || data?.detail || 'Erreur lors de la réassignation.', 'error')
     } finally {
       setSubmitting(false)
     }
@@ -58,7 +59,7 @@ export default function ReassignerDocteurModal({ rdv, onClose, onDone }) {
           <div>
             <p className="text-xs text-gray-400 mb-1">Nouvelle date/heure (optionnel — sinon la date initiale est conservée)</p>
             <div className="flex items-center gap-2">
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+              <input type="date" value={date} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setDate(e.target.value)}
                 className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-transparent text-sm" />
               <input type="time" value={heure} onChange={(e) => setHeure(e.target.value)}
                 className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-transparent text-sm" />

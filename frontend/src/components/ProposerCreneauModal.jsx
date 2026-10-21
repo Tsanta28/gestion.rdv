@@ -30,8 +30,9 @@ export default function ProposerCreneauModal({ rdv, onClose, onDone }) {
       await proposerCreneaux(rdv.id, creneaux)
       push('Proposition envoyée au patient ✅', 'success')
       onDone()
-    } catch {
-      push("Erreur lors de l'envoi de la proposition.", 'error')
+    } catch (err) {
+      const data = err.response?.data
+      push(data?.creneaux?.[0] || data?.detail || "Erreur lors de l'envoi de la proposition.", 'error')
     } finally {
       setSubmitting(false)
     }
@@ -47,7 +48,7 @@ export default function ProposerCreneauModal({ rdv, onClose, onDone }) {
           <div className="space-y-3">
             {slots.map((slot, i) => (
               <div key={i} className="flex items-center gap-2">
-                <input type="date" value={slot.date} onChange={(e) => updateSlot(i, 'date', e.target.value)} required
+                <input type="date" value={slot.date} min={new Date().toISOString().slice(0, 10)} onChange={(e) => updateSlot(i, 'date', e.target.value)} required
                   className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-transparent text-sm" />
                 <input type="time" value={slot.heure} onChange={(e) => updateSlot(i, 'heure', e.target.value)} required
                   className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-transparent text-sm" />

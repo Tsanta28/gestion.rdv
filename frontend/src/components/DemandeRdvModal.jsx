@@ -36,8 +36,9 @@ export default function DemandeRdvModal({ open, onClose, onDone, docteur, date }
       setHeure('')
       setMotif('')
       onDone()
-    } catch {
-      push('Erreur lors de la demande.', 'error')
+    } catch (err) {
+      const data = err.response?.data
+      push(data?.date_heure?.[0] || data?.detail || 'Erreur lors de la demande.', 'error')
     } finally {
       setSubmitting(false)
     }

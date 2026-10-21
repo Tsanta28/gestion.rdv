@@ -76,8 +76,9 @@ export default function SecretaireAppointments() {
       setForm({ patient_id: '', docteur_id: '', date: '', heure: '', motif: '' })
       setSpecialiteFiltre('')
       load()
-    } catch {
-      push('Erreur lors de la création.', 'error')
+    } catch (err) {
+      const data = err.response?.data
+      push(data?.date_heure?.[0] || data?.detail || 'Erreur lors de la création.', 'error')
     }
   }
 
@@ -165,7 +166,7 @@ export default function SecretaireAppointments() {
             ))}
           </select>
           <div className="grid grid-cols-2 gap-3">
-            <input type="date" required value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })}
+            <input type="date" required value={form.date} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setForm({ ...form, date: e.target.value })}
               className="px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-transparent" />
             <input type="time" required value={form.heure} onChange={(e) => setForm({ ...form, heure: e.target.value })}
               className="px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-transparent" />

@@ -4,7 +4,6 @@ Configuration Django pour le projet medical-appointments.
 from pathlib import Path
 from datetime import timedelta
 from decouple import config, Csv
-import os, dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -34,6 +33,7 @@ INSTALLED_APPS = [
     'apps.dashboard',
     'apps.agenda',
     'apps.consultations',
+    'apps.notifications',
 ]
 
 MIDDLEWARE = [
@@ -67,17 +67,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-DATABASE_URL = config("DATABASE_URL", default="").strip().strip('"').strip("'")
-
-if DATABASE_URL:
-    DATABASES = {"default": dj_database_url.parse(DATABASE_URL, conn_max_age=600)}
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
+}
 
 AUTH_USER_MODEL = 'users.User'
 
@@ -94,7 +89,6 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
-STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 MEDIA_URL = '/media/'
@@ -132,16 +126,3 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'API REST pour la gestion de rendez-vous medicaux (admin, secretaire, docteur, patient).',
     'VERSION': '1.0.0',
 }
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".onrender.com"]
-
-
-
-# SECRET_KEY = os.environ["SECRET_KEY"]
-# DEBUG = os.environ.get("DEBUG", "False") == "True"
-# ALLOWED_HOSTS = [os.environ.get("BACKEND_HOST", "localhost")]
-# INSTALLED_APPS += ["corsheaders"]
-# MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
-# MIDDLEWARE.insert(0, "corsheaders.middleware.CorsMiddleware")
-# DATABASES = {"default": dj_database_url.config(conn_max_age=600)}
-
-# CORS_ALLOWED_ORIGINS = [os.environ["FRONTEND_URL"]]
