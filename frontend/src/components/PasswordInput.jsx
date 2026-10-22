@@ -1,11 +1,7 @@
 import { forwardRef, useState } from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 
-/**
- * Champ mot de passe avec icone "oeil" pour afficher/masquer la saisie.
- * Supporte aussi bien la saisie controlee (value/onChange) que
- * react-hook-form (via `ref` + `...register(...)` passes directement).
- */
+
 const PasswordInput = forwardRef(function PasswordInput({ className = '', ...props }, ref) {
   const [visible, setVisible] = useState(false)
 

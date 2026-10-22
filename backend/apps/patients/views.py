@@ -51,9 +51,7 @@ class PatientViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['patch'])
     def valider(self, request, pk=None):
         """Valide l'inscription d'un patient auto-inscrit (active son compte)."""
-        # On ne passe pas par self.get_object() car le queryset par defaut
-        # exclut les comptes en_attente (is_active=False) : c'est justement
-        # ce qu'on doit pouvoir cibler ici.
+        
         try:
             patient = Patient.objects.select_related('user').get(pk=pk)
         except Patient.DoesNotExist:
